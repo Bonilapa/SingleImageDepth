@@ -25,7 +25,7 @@ def make_model():
     coarse.add(Conv2D(filters=64, kernel_size=3, stride=1, activation='relu'))
 
     coarse.add(Flatten())
-    coarse.add(Dense(5120, activation='relu'))
+    coarse.add(Dense(5120, activation='lineae'))
     coarse.add(Dense(4800, activation=''))
 
     fine = Sequential()
@@ -55,3 +55,4 @@ model.fit(generator.flow(xdata,
           verbose=2,
           batch_size=128, )
 print(model.evaluate(xtest))
+model.save('model.h5')
