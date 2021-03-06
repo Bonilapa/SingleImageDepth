@@ -4,6 +4,12 @@ import numpy as np
 import os
 import glob
 import re
+
+from keras_preprocessing.image import ImageDataGenerator
+from tensorflow.keras.layers import Conv2D, MaxPool2D, Flatten, Dense
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.optimizers import SGD
+
 def read_and_resize(filename: str, grayscale: bool = False, fx: float = 1.0, fy: float = 1.0):
     if grayscale:
         img_result = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
@@ -44,10 +50,27 @@ def natural_keys(text):
     (See Toothy's implementation in the comments)
     '''
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
-count = 0
-ok_count = 0
-color_images = []
-depth_images = []
+
+def make_model():
+    coarse = Sequential()
+    coarse.add(Conv2D(filters=96, kernel_size=15, stride=5, input_shape=(320, 240, 3), activation='relu'))
+    coarse.add(MaxPool2D(pool_size=2, strides=1))
+    coarse.add(Conv2D(filters=128, kernel_size=5, stride=3, activation='relu'))
+    coarse.add(Conv2D(filters=128, kernel_size=3, stride=1, activation='relu'))
+    coarse.add(Conv2D(filters=64, kernel_size=3, stride=1, activation='relu'))
+
+    coarse.add(Flatten())
+    coarse.add(Dense(5120, activation='lineae'))
+    coarse.add(Dense(4800, activation=''))
+
+    fine = Sequential()
+    fine.add(Conv2D(filters=59, kernel_size=5, stride=2, padding=1, input_shape=(321, 240, 3), activation='relu'))
+    # concat
+
+    fine.add(Conv2D(filters=60, kernel_size=3, stride=1, padding=1, input_shape=(321, 240, 3), activation='relu'))
+    return fine
+
+model = make_model()
 
 # path = "basements/basement_0001a/"+str(name)+".png"
 # color_path = "./png//DATASET/" + path
@@ -63,8 +86,12 @@ for d in dirs:
         xfiles.sort(key=natural_keys)
         # print(xfiles)
 
-        s = s.split("/")[-2]
-        # print("---------------------"+s)
+        # s = s.split("/")[-2]
+
+        count = 0
+        ok_count = 0
+        color_images = []
+        depth_images = []
 
         for f in xfiles:
             # f = f.split("/")[-1]
@@ -93,7 +120,44 @@ for d in dirs:
             #         print(e)
             #         continue
             #     num +=1
+        # temporary break the loop only for 1 folder processing on testing stage
         break
+
+        color_images_n = np.array(color_images)
+        depth_images_n = np.array(depth_images)
+        '''
+        Data augmentation
+        '''
+        generator = ImageDataGenerator(rotation_range=5,
+                                       zoom_range=[1.0, 1.5],
+                                       horizontal_flip=True,
+                                       validation_split=0.15,
+                                       )
+
+        generator.fit(color_images)
+
+
+
+        '''
+        model.fit here
+        '''
+
+        model.compile(optimizer=SGD(1e-4),
+                      loss='sparse_categorical_crossentropy',
+                      metrics=['accuracy'])
+
+        model.fit(generator.flow(color_images_n,
+                                 depth_images_n,
+                                 batch_size=128),
+                  validation_data=generator.flow(color_images_n,
+                                                 depth_images_n,
+                                                 batch_size=128,
+                                                 subset='validation'),
+                  steps_per_epoch=len(xdata) / 128,
+                  epochs=10,
+                  verbose=2,
+                  batch_size=128, )
+    # temporary break the loop only for 1 folder processing on testing stage
     break
 print("Data reading result:")
 print(str(count)+" images without depth pair")
