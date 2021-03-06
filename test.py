@@ -1,6 +1,6 @@
 import cv2
 import matplotlib.pyplot as plt
-
+import numpy as np
 import os
 import glob
 import re
@@ -46,49 +46,61 @@ def natural_keys(text):
     return [ atoi(c) for c in re.split(r'(\d+)', text) ]
 count = 0
 ok_count = 0
+color_images = []
+depth_images = []
+
+# path = "basements/basement_0001a/"+str(name)+".png"
+# color_path = "./png//DATASET/" + path
+# depth_path = "./png/depth/" + path
 
 for d in dirs:
     # print(d)
 
     subdirs = glob.glob(d+"*/")
     for s in subdirs:
-        # print(s)
+        print(s+" reading...")
         xfiles = glob.glob(s+"*.png")
         xfiles.sort(key=natural_keys)
         # print(xfiles)
 
         s = s.split("/")[-2]
-        print("---------------------"+s)
+        # print("---------------------"+s)
 
         for f in xfiles:
             # f = f.split("/")[-1]
             # print(f)
+
+
             tmp = f.split("/")
             tmp[2] = "depth"
             d_f = '/'.join(tmp)
             # print("==================================="+d_f)
             # png_depth_file = './png/depth' + s[9:-1]
+
+            # not all color images have depth accordance in original dataset
             if not os.path.exists(d_f):
-                print("_____CAUTION!! file has no pair: \n"+f)
+                # print("_____CAUTION!! file has no pair: ___ "+f)
                 count = count + 1
             else:
                 ok_count = ok_count +1
+
+                color_images.append(read_and_resize(f, True, fx=0.5, fy=0.5))
+                depth_images.append(read_and_resize(d_f, True, fx=0.5, fy=0.5))
+
             #     try:
             #         im = read_and_resize(f)
             #     except OSError as e:
             #         print(e)
             #         continue
             #     num +=1
-print(count)
-print(ok_count)
+        break
+    break
+print("Data reading result:")
+print(str(count)+" images without depth pair")
+print(str(ok_count)+" full pairs")
+color_images_n = np.array(color_images)
+depth_images_n = np.array(depth_images)
+print("X_data:\n"+str(color_images_n.shape))
+print("Y_data:\n"+str(depth_images_n.shape))
 
-
-
-# for name in range(0,)
-# path = "basements/basement_0001a/"+str(name)+".png"
-# color_path = "./png//DATASET/" + path
-# depth_path = "./png/depth/" + path
-# im1 = read_and_resize(color_path, True, fx=1.0, fy=1.0)
-# print(im1.shape)
-# im2 = read_and_resize(depth_path, True, fx=1.0, fy=1.0)
-# show_in_row([im1, im2])
+show_in_row([color_images[0], depth_images[0]])
